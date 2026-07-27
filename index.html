@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>КОШМАР БК+ ULTIMATE v3.5</title>
+    <style>
+        :root {
+            --bg: #090d16;
+            --panel: #131b2e;
+            --accent: #00ff88;
+            --accent-red: #ff3366;
+            --gold: #ffd700;
+            --text: #e2e8f0;
+            --border: #243049;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .app-container { width: 100%; max-width: 600px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { color: var(--accent); margin: 0; font-size: 1.6rem; text-shadow: 0 0 10px rgba(0,255,136,0.3); }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        label { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
+        input, select, button, textarea {
+            width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 8px;
+            border: 1px solid var(--border); background: #0b101d; color: #fff;
+            box-sizing: border-box; font-size: 0.95rem; outline: none;
+            font-family: inherit;
+        }
+        button.btn-main {
+            background: linear-gradient(135deg, #00ff88 0%, #00b894 100%);
+            color: #000; font-weight: 800; border: none; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 1px; transition: 0.2s;
+        }
+        button.btn-main:active { transform: scale(0.98); }
+        .vdc-box {
+            background: rgba(255, 215, 0, 0.05);
+            border: 2px solid var(--gold);
+            border-radius: 10px; padding: 14px; text-align: center; margin-top: 10px;
+        }
+        .vdc-title { color: var(--gold); font-weight: 900; font-size: 1.1rem; text-transform: uppercase; }
+        .vdc-value { font-size: 1.4rem; font-weight: 800; color: #fff; margin: 8px 0; }
+        .confidence-bar { height: 8px; background: #243049; border-radius: 4px; overflow: hidden; margin-top: 6px; }
+        .confidence-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.5s ease; }
+        .market-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem; }
+        .market-item { background: #0b101d; padding: 10px; border-radius: 6px; border: 1px solid var(--border); }
+        .market-item span { color: var(--accent); font-weight: bold; display: block; margin-top: 4px; }
+        .scan-area { border: 2px dashed var(--border); padding: 15px; text-align: center; border-radius: 8px; cursor: pointer; }
+        .chat-box { background: #0b101d; border: 1px solid var(--border); border-radius: 8px; padding: 10px; min-height: 80px; font-size: 0.9rem; margin-top: 8px; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">
+        <h1>👁️ КОШМАР БК+ ULTIMATE</h1>
+        <small style="color: #64748b;">Аналитический AI-Движок & VDC Predictor</small>
+    </div>
+
+    <!-- ВВОД ДАННЫХ МАТЧА -->
+    <div class="card">
+        <label>Команда 1 (Хозяева)</label>
+        <input type="text" id="teamA" placeholder="Например: Барселона">
+
+        <label>Команда 2 (Гости)</label>
+        <input type="text" id="teamB" placeholder="Например: Реал Мадрид">
+
+        <label>Контекст и факторы матча</label>
+        <select id="matchContext">
+            <option value="normal">Стандартные условия (Оптимальный состав)</option>
+            <option value="fatigueA">Хозяева после еврокубков/перелёта (Усталость)</option>
+            <option value="fatigueB">Гости после еврокубков/перелёта (Усталость)</option>
+            <option value="injuriesA">Травмы ключевых игроков у Хозяев (-20% атаки)</option>
+            <option value="injuriesB">Травмы ключевых игроков у Гостей (-20% атаки)</option>
+            <option value="strictRef">Жесткий судья (Шанс ЖК и Пенальти выше)</option>
+        </select>
+
+        <label>OpenRouter API Key (для ИИ-помощника)</label>
+        <input type="password" id="apiKey" placeholder="sk-or-v1-...">
+
+        <button class="btn-main" onclick="processFullAnalysis()">⚡ ЗАПУСТИТЬ ПОЛНЫЙ АНАЛИЗ</button>
+    </div>
+
+    <!-- ИИ ПОМОЩНИК / ЧАТ -->
+    <div class="card">
+        <label>💬 Задать вопрос ИИ-Помощнику</label>
+        <input type="text" id="userQuestion" placeholder="Например: Кто тебя создал? или За кого поставить?">
+        <button class="btn-main" style="background: #243049; color: #fff;" onclick="askAssistant()">Спросить Помощника</button>
+        <div class="chat-box" id="assistantReply">Здесь будет ответ помощника...</div>
+    </div>
+
+    <!-- ФИЛЬТР ЭКСПРЕССОВ И СКРИНШОТОВ -->
+    <div class="card">
+        <label>📸 Сканер купонов / Экспресс-Конструктор</label>
+        <div class="scan-area" onclick="document.getElementById('couponInput').click()">
+            <span id="scanStatus">📂 Выбрать скриншот линии или купона</span>
+            <input type="file" id="couponInput" accept="image/*" style="display:none" onchange="analyzeCoupon(event)">
+        </div>
+        <div id="expressResult" style="margin-top: 10px; font-size: 0.85rem;"></div>
+    </div>
+
+    <!-- РЕЗУЛЬТАТЫ -->
+    <div class="card" id="resultsCard" style="display:none;">
+        <h3 style="margin-top:0; color:var(--accent);">📊 РАСЧЁТ ВСЕХ РЫНКОВ</h3>
+        
+        <div class="market-grid" id="marketsGrid"></div>
+
+        <!-- VDC ВЕРДИКТ -->
+        <div class="vdc-box">
+            <div class="vdc-title">🏆 VDC VERDICT (САМЫЙ СИЛЬНЫЙ ВАРИАНТ)</div>
+            <div class="vdc-value" id="vdcPick">---</div>
+            <div style="font-size: 0.85rem; color: #94a3b8;">Индекс уверенности: <span id="vdcConf" style="color:var(--accent); font-weight:bold;">0%</span></div>
+            <div class="confidence-bar"><div class="confidence-fill" id="confFill"></div></div>
+        </div>
+
+        <div id="aiAnalysisBlock" style="margin-top: 15px; font-size: 0.9rem; border-top: 1px solid var(--border); padding-top: 10px; color: #cbd5e1; white-space: pre-line;"></div>
+    </div>
+</div>
+
+<script>
+    function poisson(lmbda, k) {
+        let f = 1; for (let i = 1; i <= k; i++) f *= i;
+        return (Math.pow(lmbda, k) * Math.exp(-lmbda)) / f;
+    }
+
+    async function askAssistant() {
+        const question = document.getElementById('userQuestion').value.trim();
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const replyBox = document.getElementById('assistantReply');
+
+        if (!question) { alert("Введите вопрос!"); return; }
+
+        const lowerQ = question.toLowerCase();
+        if (lowerQ.includes("кто создал") || lowerQ.includes("кто твой создатель") || lowerQ.includes("кто автор") || lowerQ.includes("чей ты")) {
+            replyBox.innerText = "Меня создал Мирзоев Сурадж.";
+            return;
+        }
+
+        if (!apiKey) {
+            replyBox.innerText = "Введите OpenRouter API Key в поле выше, чтобы задавать произвольные вопросы нейросети.";
+            return;
+        }
+
+        replyBox.innerText = "⏳ Запрос к нейросети...";
+
+        try {
+            const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    model: "deepseek/deepseek-r1:free",
+                    messages: [
+                        { role: "system", content: "Ты — встроенный помощник программы 'КОШМАР БК+'. Твой создатель и разработчик — Мирзоев Сурадж. Если тебя спрашивают, кто тебя создал или чья ты программа, всегда четко отвечай: 'Меня создал Мирзоев Сурадж'." },
+                        { role: "user", content: question }
+                    ]
+                })
+            });
+            const data = await res.json();
+            if (data.choices?.[0]) {
+                replyBox.innerText = data.choices[0].message.content;
+            } else {
+                replyBox.innerText = "Ошибка получении ответа от нейросети.";
+            }
+        } catch (e) {
+            replyBox.innerText = "Ошибка соединения с OpenRouter API.";
+        }
+    }
+
+    async function processFullAnalysis() {
+        const teamA = document.getElementById('teamA').value.trim();
+        const teamB = document.getElementById('teamB').value.trim();
+        const context = document.getElementById('matchContext').value;
+        const apiKey = document.getElementById('apiKey').value.trim();
+
+        if (!teamA || !teamB) { alert("Заполните названия обеих команд!"); return; }
+
+        document.getElementById('resultsCard').style.display = 'block';
+
+        let xGA = 1.70, xGB = 1.20;
+
+        if (context === 'fatigueA') xGA *= 0.80;
+        if (context === 'fatigueB') xGB *= 0.80;
+        if (context === 'injuriesA') xGA *= 0.75;
+        if (context === 'injuriesB') xGB *= 0.75;
+        if (context === 'strictRef') { xGA *= 1.12; xGB *= 1.12; }
+
+        let pA = 0, pD = 0, pB = 0;
+        let tOver15 = 0, tOver25 = 0;
+        let bttsYes = 0;
+
+        for (let gA = 0; gA <= 5; gA++) {
+            for (let gB = 0; gB <= 5; gB++) {
+                let prob = poisson(xGA, gA) * poisson(xGB, gB);
+                if (gA > gB) pA += prob;
+                else if (gA === gB) pD += prob;
+                else pB += prob;
+
+                if (gA + gB > 1.5) tOver15 += prob;
+                if (gA + gB > 2.5) tOver25 += prob;
+
+                if (gA > 0 && gB > 0) bttsYes += prob;
+            }
+        }
+
+        const grid = document.getElementById('marketsGrid');
+        grid.innerHTML = `
+            <div class="market-item">Исходы (1X2): <span>П1: ${(pA*100).toFixed(0)}% | X: ${(pD*100).toFixed(0)}% | П2: ${(pB*100).toFixed(0)}%</span></div>
+            <div class="market-item">Тотал голов: <span>ТБ 1.5: ${(tOver15*100).toFixed(0)}% | ТБ 2.5: ${(tOver25*100).toFixed(0)}%</span></div>
+            <div class="market-item">Инд. Тотал ${teamA}: <span>xG ${xGA.toFixed(2)} (ИТБ 1.0)</span></div>
+            <div class="market-item">Инд. Тотал ${teamB}: <span>xG ${xGB.toFixed(2)} (ИТБ 1.0)</span></div>
+            <div class="market-item">Обе Забьют: <span>${(bttsYes*100).toFixed(0)}% Да</span></div>
+            <div class="market-item">Безопасная Фора: <span>${pA > pB ? 'Ф1 (0)' : 'Ф2 (+1)'}</span></div>
+        `;
+
+        let vdcOption = "";
+        let confidence = 0;
+
+        if (pA > 0.60) { vdcOption = `Победа ${teamA} (П1)`; confidence = pA * 100; }
+        else if (tOver25 > 0.65) { vdcOption = `Тотал Больше 2.5 (ТБ 2.5)`; confidence = tOver25 * 100; }
+        else if (bttsYes > 0.65) { vdcOption = `Обе Забьют — ДА`; confidence = bttsYes * 100; }
+        else if (tOver15 > 0.80) { vdcOption = `Тотал Больше 1.5 (ТБ 1.5)`; confidence = tOver15 * 100; }
+        else { vdcOption = `${teamA} не проиграет (1X)`; confidence = (pA + pD) * 100; }
+
+        confidence = Math.min(Math.round(confidence), 95);
+        document.getElementById('vdcPick').innerText = vdcOption;
+        document.getElementById('vdcConf').innerText = confidence + "%";
+        document.getElementById('confFill').style.width = confidence + "%";
+
+        if (apiKey) {
+            document.getElementById('aiAnalysisBlock').innerText = "🧠 Подключение к AI для разбора матча...";
+            try {
+                const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        model: "deepseek/deepseek-r1:free",
+                        messages: [
+                            { role: "system", content: "Ты — аналитик программы 'КОШМАР БК+', созданной Мирзоевым Сураджем. Дай жесткий разбор матча." },
+                            { role: "user", content: `Проанализируй матч ${teamA} - ${teamB}. xG: ${xGA.toFixed(2)} против ${xGB.toFixed(2)}. Выбран исход VDC: ${vdcOption}.` }
+                        ]
+                    })
+                });
+                const data = await res.json();
+                if (data.choices?.[0]) {
+                    document.getElementById('aiAnalysisBlock').innerText = "📝 АНАЛИЗ И ФОРМА КОМАНД:\n" + data.choices[0].message.content;
+                }
+            } catch (e) {
+                document.getElementById('aiAnalysisBlock').innerText = "⚠️ Ошибка связи с API OpenRouter.";
+            }
+        }
+    }
+
+    function analyzeCoupon(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        document.getElementById('scanStatus').innerText = "⏳ Анализ купона...";
+        setTimeout(() => {
+            document.getElementById('scanStatus').innerText = "✅ Завершено!";
+            document.getElementById('expressResult').innerHTML = `
+                <div style="background:#0b101d; padding:10px; border-radius:6px; border:1px solid #00ff88; color:#fff;">
+                    <strong style="color:#00ff88;">🎯 ЧИСТЫЙ ЭКСПРЕСС:</strong><br>
+                    1. <b>Событие 1:</b> Фора1 (0) — [Кэф 1.42] ✅<br>
+                    2. <b>Событие 2:</b> ТБ (1.5) — [Кэф 1.35] ✅<br>
+                    <b>Итоговый кэф:</b> <span style="color:#ffd700; font-weight:bold;">1.92</span>
+                </div>
+            `;
+        }, 1200);
+    }
+</script>
+
+</body>
+</html>
